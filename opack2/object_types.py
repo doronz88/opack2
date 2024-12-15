@@ -4,7 +4,7 @@ import struct
 from enum import Enum, auto
 from typing import Tuple
 
-from opack.exceptions import BytesTooLargeError, IntegerOutOfBoundsError, InvalidTypeError
+from opack2.exceptions import BytesTooLargeError, IntegerOutOfBoundsError, InvalidTypeError
 
 
 class TerminatorObject:

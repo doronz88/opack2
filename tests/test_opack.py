@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from opack.exceptions import InvalidTypeError
-from opack.opack import dumps, loads
+from opack2.exceptions import InvalidTypeError
+from opack2.opack import dumps, loads
 
 
 def do_test_dumps_loads(loaded_value, expected_dumped_value):

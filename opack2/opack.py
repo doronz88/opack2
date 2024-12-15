@@ -1,6 +1,6 @@
 from typing import Mapping
 
-from opack.opack_construct import OPack
+from opack2.opack_construct import OPack
 
 
 def loads(opack_bytes: bytes) -> Mapping:

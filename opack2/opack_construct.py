@@ -4,7 +4,7 @@ from construct import Adapter, Array, Computed, Filter, Float32l, Float64l, Gree
     Int16ub, Int32ub, Int32ul, Int64ub, Int64ul, LazyBound, PascalString, Prefixed, RepeatUntil, Struct, Switch, \
     Timestamp, this
 
-from opack.object_types import OBJ_TYPE_MAP, OPackObjectType, TerminatorObject
+from opack2.object_types import OBJ_TYPE_MAP, OPackObjectType, TerminatorObject
 
 
 class ArrayAdapter(Adapter):
