@@ -1,25 +1,28 @@
 [project]
-name = "opack"
-version = "0.1.0"
+name = "opack2"
+version = "0.0.1"
 description = "Python library for parsing the opack format"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
-keywords = ["ios", "opack", "plist", "cli", "parser"]
+keywords = ["ios", "opack", "opack2", "plist", "cli", "parser"]
 authors = [
-    { name = "lori", email = "loriwittdev@gmail.com" }
+    { name = "lori", email = "loriwittdev@gmail.com" },
+    { name = "doronz", email = "doron88@gmail.com" }
 ]
 maintainers = [
-    { name = "lori", email = "loriwittdev@gmail.com" }
+    { name = "lori", email = "loriwittdev@gmail.com" },
+    { name = "doronz", email = "doron88@gmail.com" }
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
 ]
 dynamic = ["dependencies"]
@@ -28,11 +31,11 @@ dynamic = ["dependencies"]
 test = ["pytest"]
 
 [project.urls]
-"Homepage" = "https://github.com/loriwitt/opack"
-"Bug Reports" = "https://github.com/loriwitt/opack/issues"
+"Homepage" = "https://github.com/doronz88/opack2"
+"Bug Reports" = "https://github.com/doronz88/opack2/issues"
 
 [project.scripts]
-pymobiledevice3 = "opack.__main__:cli"
+opack = "opack.__main__:cli"
 
 [tool.setuptools.packages.find]
 exclude = ["docs*", "tests*"]
