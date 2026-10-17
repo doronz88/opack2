@@ -1,5 +1,9 @@
 from datetime import datetime, timezone
 
+import arrow
+import pytest
+from bytestruct import BinaryParseError
+
 from opack2.exceptions import InvalidTypeError
 from opack2.opack import dumps, loads
 
@@ -66,3 +70,28 @@ def test_invalid_input():
         assert False
     except InvalidTypeError:
         pass
+
+
+def test_datetime_parses_to_arrow():
+    parsed = loads(b'\x06\x00\x00\x00 l\t\xdfA')
+    assert isinstance(parsed, arrow.Arrow)
+    assert parsed == arrow.Arrow(1970, 1, 1)
+
+
+def test_terminated_dict_discards_terminator_value():
+    assert loads(b'\xef\t\t\x03Aa') == {1: 1}
+
+
+def test_terminated_list_empty():
+    assert loads(b'\xdf\x03') == []
+
+
+def test_truncated_input():
+    for data in (b'', b'2\x00', b'b\x01', b'\xd2\t', b'\xdf\t', b'\xe1\t'):
+        with pytest.raises(BinaryParseError):
+            loads(data)
+
+
+def test_invalid_utf8():
+    with pytest.raises(BinaryParseError):
+        loads(b'A\xff')
