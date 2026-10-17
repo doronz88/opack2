@@ -8,7 +8,7 @@ from opack2.exceptions import BytesTooLargeError, IntegerOutOfBoundsError, Inval
 
 
 class TerminatorObject:
-    """Used to imitate the \x03 terminator in the construct struct"""
+    """Marks the end of a terminated array or dictionary (the \x03 object) when building"""
     pass
 
 

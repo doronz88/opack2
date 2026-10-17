@@ -1,2 +1,2 @@
 arrow
-construct
+bytestruct>=0.1.0
