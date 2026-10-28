@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Tuple
+from typing import Any, List, Mapping, Tuple
 
 import arrow
 from bytestruct import U8, U16_BE, BinaryParseError, ByteReader, Scalar
@@ -9,11 +9,13 @@ MAC_EPOCH = arrow.Arrow(1904, 1, 1)
 
 TERMINATOR_TYPE = 3
 F64_LE = Scalar('<d')
-INT_FORMATS = {0x30: U8, 0x32: Scalar('<I'), 0x33: Scalar('<Q'), 0x35: Scalar('<f'), 0x36: F64_LE}
+INT_FORMATS = {0x30: U8, 0x31: Scalar('<h'), 0x32: Scalar('<I'), 0x33: Scalar('<Q'), 0x35: Scalar('<f'), 0x36: F64_LE}
 # Indexed by how far the type is past the inline-length range (0x60 for strings, 0x90 for bytes)
 LENGTH_FORMATS = {1: U8, 2: U16_BE, 3: Scalar('>I'), 4: Scalar('>Q')}
 STRING_INLINE_MAX = 0x60
 BYTES_INLINE_MAX = 0x90
+# Back-references: 0xA0-0xC0 hold the index inline, 0xC1-0xC4 are followed by a little-endian index of 1-4 bytes
+BACK_REFERENCE_INLINE_MAX = 0xC0
 
 
 def _read_data(reader: ByteReader, obj_type: int, inline_base: int, inline_max: int) -> bytes:
@@ -43,32 +45,68 @@ def _read_scalar(reader: ByteReader, obj_type: int, kind: OPackObjectType) -> An
     return _read_data(reader, obj_type, 0x70, BYTES_INLINE_MAX)
 
 
-def _read(reader: ByteReader) -> Tuple[int, Any]:
-    """ Read one object, returning its type byte (to detect terminators) and its value """
+def _is_referenceable(kind: OPackObjectType, value: Any) -> bool:
+    """
+    Whether a decoded object enters the back-reference table. These rules match CoreUtils' OPACKDecodeData: integers
+    outside the inline range (-1 to 0x27), whatever their encoded width, floats, timestamps, non-empty strings and data
+    of at least two bytes. Booleans, containers and back-references themselves never do.
+    """
+    if kind == OPackObjectType.INT:
+        return isinstance(value, float) or not -1 <= value <= 0x27
+    if kind == OPackObjectType.TIMESTAMP:
+        return True
+    if kind == OPackObjectType.STRING:
+        return len(value) > 0
+    if kind == OPackObjectType.BYTES:
+        return len(value) > 1
+    return False
+
+
+def _read_back_reference(reader: ByteReader, obj_type: int, objects: List[Any]) -> Any:
+    offset = reader.absolute
+    if obj_type <= BACK_REFERENCE_INLINE_MAX:
+        index = obj_type - 0xA0
+    else:
+        index = int.from_bytes(reader.read(obj_type - BACK_REFERENCE_INLINE_MAX), 'little')
+    if index >= len(objects):
+        raise BinaryParseError(f'back-reference {index} out of range ({len(objects)} objects seen)', offset=offset)
+    return objects[index]
+
+
+def _read(reader: ByteReader, objects: List[Any]) -> Tuple[int, Any]:
+    """
+    Read one object, returning its type byte (to detect terminators) and its value. `objects` is the back-reference
+    table, every referenceable object in the order it was decoded (repeats included).
+    """
     obj_type = reader.unpack_one(U8)
     kind = OPackObjectType.get_type(obj_type)
+    if kind == OPackObjectType.BACK_REFERENCE:
+        return obj_type, _read_back_reference(reader, obj_type, objects)
     if kind == OPackObjectType.ARRAY_LENGTHED:
-        return obj_type, [_read(reader)[1] for _ in range(obj_type - 0xD0)]
+        return obj_type, [_read(reader, objects)[1] for _ in range(obj_type - 0xD0)]
     if kind == OPackObjectType.ARRAY_TERMINATED:
         array = []
         while True:
-            element_type, element = _read(reader)
+            element_type, element = _read(reader, objects)
             if element_type == TERMINATOR_TYPE:
                 return obj_type, array
             array.append(element)
     if kind == OPackObjectType.DICT_LENGTHED:
-        items = [(_read(reader)[1], _read(reader)[1]) for _ in range(obj_type - 0xE0)]
+        items = [(_read(reader, objects)[1], _read(reader, objects)[1]) for _ in range(obj_type - 0xE0)]
         return obj_type, dict(items)
     if kind == OPackObjectType.DICT_TERMINATED:
         # The terminator key is followed by a value object, which is discarded
         items = []
         while True:
-            key_type, key = _read(reader)
-            value = _read(reader)[1]
+            key_type, key = _read(reader, objects)
+            value = _read(reader, objects)[1]
             if key_type == TERMINATOR_TYPE:
                 return obj_type, dict(items)
             items.append((key, value))
-    return obj_type, _read_scalar(reader, obj_type, kind)
+    value = _read_scalar(reader, obj_type, kind)
+    if _is_referenceable(kind, value):
+        objects.append(value)
+    return obj_type, value
 
 
 def _build_data(data: bytes, obj_type: int, inline_max: int) -> bytes:
@@ -116,7 +154,7 @@ def _build(obj) -> bytes:
 
 
 def loads(opack_bytes: bytes) -> Mapping:
-    return _read(ByteReader(opack_bytes))[1]
+    return _read(ByteReader(opack_bytes), [])[1]
 
 
 def dumps(obj) -> bytes:

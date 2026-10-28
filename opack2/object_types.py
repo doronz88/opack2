@@ -33,6 +33,9 @@ def _get_int_object_type(obj) -> int:
         return obj + 8
     elif obj.bit_length() <= 8:
         return 0x30
+    elif obj.bit_length() <= 15:
+        # 0x31 is a signed 16-bit integer
+        return 0x31
     elif obj.bit_length() <= 32:
         return 0x32
     elif obj.bit_length() <= 64:
@@ -112,6 +115,7 @@ class OPackObjectType(Enum):
     ARRAY_TERMINATED = auto()
     DICT_LENGTHED = auto()
     DICT_TERMINATED = auto()
+    BACK_REFERENCE = auto()
 
     @staticmethod
     def get_type(obj_type) -> 'OPackObjectType':
@@ -121,12 +125,14 @@ class OPackObjectType(Enum):
             return OPackObjectType.TERMINATOR
         if obj_type == 6:
             return OPackObjectType.TIMESTAMP
-        if 8 <= obj_type <= 0x36 and obj_type != 0x31 and obj_type != 0x34:
+        if 8 <= obj_type <= 0x36 and obj_type != 0x34:
             return OPackObjectType.INT
         if 0x40 <= obj_type <= 0x64:
             return OPackObjectType.STRING
         if 0x70 <= obj_type <= 0x94:
             return OPackObjectType.BYTES
+        if 0xA0 <= obj_type <= 0xC4:
+            return OPackObjectType.BACK_REFERENCE
         if 0xD0 <= obj_type <= 0xDF:
             if obj_type == 0xDF:
                 return OPackObjectType.ARRAY_TERMINATED
